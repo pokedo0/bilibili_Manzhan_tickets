@@ -5,7 +5,7 @@
 打开https://show.bilibili.com/platform/home.html 然后按F12打开   
 ![](https://github.com/fangkuai341/aaa/assets/76081349/12ba2eb3-ef49-421c-808f-36ef6653a2ab)   
 随便打开一个数据，图中的那个位置就是cookie   
-2. npm run serve 运行代码
+2. npm run serve 运行代码   
 3. 在弹出的页面按要求输入，点击开始（时间最后设置0.3就好，太快的话不行的）  
 5. www.dls-lcy.com 这是我的博客里面有配置好的抢票系统就是网速超级慢还不如手动抢（没钱升级服务器）  
 6. 如果还是不会下载vue和node，我明天搞个傻瓜安装的文件。  
