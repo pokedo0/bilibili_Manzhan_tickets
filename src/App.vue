@@ -69,7 +69,7 @@ const onlick = () => {
                   buyer_info: JSON.stringify(grxx),
                 },
               }).then((res) => {
-                if (res.data.data && res.data.data.length) {
+                if (res.data.errno===0 && res.data.errtag===0) {
                   clearInterval(data);
                   alert("抢到了，请尽快去支付");
                 }
