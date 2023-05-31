@@ -65,7 +65,7 @@ const onlick = () => {
                   order_type: 1,
                   timestamp: new Date().getTime(),
                   token: token,
-                  deviceId: "3c2003ba05634736371935d33a47f77f",
+                  deviceId: "3c2003ba05634736371935d33a47f77d",
                   buyer_info: JSON.stringify(grxx),
                 },
               }).then((res) => {
