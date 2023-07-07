@@ -13,6 +13,7 @@
       />种类型（没有填的话，按钱数判断，若有相同的钱数不能保证抢对票类型）
     </div>
     <button @click="onlick">开始</button>
+    <button @click="toStop">停止</button>
   </div>
 </template>
 
@@ -24,7 +25,10 @@ const qian = ref();
 const time = ref();
 const piaoId = ref();
 const piaoType = ref();
+let isStop = ref();
+
 const onlick = () => {
+  isStop.value = false;
   let grxx;
   axios({
     method: "GET",
@@ -95,10 +99,14 @@ const onlick = () => {
           });
         }
       });
+      if (isStop.value) {
+        clearInterval(data); // Stop the interval
+      }
     },
-    time.value ? time.value * 1000 : 1000
+      time.value ? time.value * 1000 : 1000
   );
 };
+const toStop = () => { isStop.value = true; }
 </script>
 
 <style></style>
