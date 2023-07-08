@@ -5,7 +5,7 @@
     <div>第 <input type="text" v-model="tian"/> 天</div>
     <div>钱数<input type="text" v-model="qian"/>（分）</div>
     <div><input type="text" v-model="time"/>秒抢一次</div>
-    <div><input type="text" v-model="inputSetTime"/>指定开始抢票时间(19:59:59)</div>
+    <div><input type="text" v-model="inputSetTime"/>设定开始抢票时间(19:59:59)</div>
     <div>
       抢第
       <input
@@ -41,10 +41,17 @@ const currentTime = ref('');
 let showSetTime = ref('');
 let ticketInfo = ref('');
 
+// bw
 tian.value = 3;
 qian.value = 58800;
-time.value = 1;
+time.value = 0.7;
 piaoId.value = 73710;
+
+// 可购
+// tian.value = 1;
+// qian.value = 9000;
+// time.value = 0.7;
+// piaoId.value = 71931;
 
 const updateTime = () => {
   setInterval(() => {
@@ -57,7 +64,7 @@ onMounted(() => {
 });
 
 
-function showInfo() {
+function showTimeInfo() {
   const fullTime = moment().format('YYYY-MM-DD') + ' ' + inputSetTime.value;
   const parsedTime = moment(fullTime, 'YYYY-MM-DD HH:mm:ss', true);
   if (parsedTime.isValid()) {
@@ -67,37 +74,18 @@ function showInfo() {
   }
 }
 
-function getTicketInfo(res) {
-  let arr = res.data.data;
-  let ticketList =
-      arr.screen_list[tian.value ? tian.value - 1 : 0].ticket_list; //数组下标代表第几天   //票类型
-  let getPiaoType = 0;
-  if (piaoType.value) {
-    getPiaoType = +piaoType.value - 1;
-  } else {
-    for (let i = 0; i < ticketList.length; i++) {
-      if (ticketList[i].price === +qian.value) {
-        getPiaoType = i;
-        break;
-      }
-    }
-  }
-  console.log('ticket info', ticketList);
-  const dateInfo = arr.screen_list[tian.value - 1].name;
-  const ticketDesc = ticketList[getPiaoType].desc;
-  ticketInfo.value = `日期: ${dateInfo}, 票: ${ticketDesc}`;
-}
-
 const onclick = () => {
-  showInfo();
+  showTimeInfo();
   const currentTime = moment();
-  // const parsedTime = moment(showSetTime.value, 'YYYY-MM-DD HH:mm:ss');
   let delay = 0;
   if (showSetTime.value?.isValid()) {
     delay = showSetTime.value.diff(currentTime); // 计算当前时间与指定时间的毫秒差
   }
   console.log('delay:', delay);
   isStop.value = false;
+  let getPiaoType = 0;
+  let ticketList;
+  let arr;
   let grxx;
   axios({
     method: "GET",
@@ -106,93 +94,100 @@ const onclick = () => {
     grxx = res.data.data.list;
     grxx[0].isBuyerInfoVerified = true;
     grxx[0].isBuyerValid = true;
-  });
-
-  axios({
-    method: "GET",
-    url: `/api/ticket/project/get?version=134&id=${piaoId.value}`,
-  }).then((res) => {
-    getTicketInfo(res);
-  });
-
-  setTimeout(() => {
-
-    // 在指定时间后执行任务
-    startBuyTickets(); // 开始定时循环任务
-  }, delay);
-
-  function startBuyTickets() {
-    let data = setInterval(
-        () => {
-          axios({
-            method: "GET",
-            url: `/api/ticket/project/get?version=134&id=${piaoId.value}`,
-          }).then((res) => {
-            let arr = res.data.data;
-            let ticketList =
-                arr.screen_list[tian.value ? tian.value - 1 : 0].ticket_list; //数组下标代表第几天   //票类型
-            let getPiaoType = 0;
-            if (piaoType.value) {
-              getPiaoType = +piaoType.value - 1;
-            } else {
-              for (let i = 0; i < ticketList.length; i++) {
-                if (ticketList[i].price === +qian.value) {
-                  getPiaoType = i;
-                  break;
-                }
-              }
-            }
-            console.log('ticket info', ticketList);
-            if (ticketList[getPiaoType].clickable) {
-              console.log('is clickable');
-              axios({
-                //获取token
-                method: "POST",
-                url: `/api/ticket/order/prepare`,
-                data: {
-                  project_id: piaoId.value,
-                  screen_id: arr.screen_list[tian.value ? tian.value - 1 : 0].id,
-                  order_type: 1,
-                  count: 1,
-                  sku_id: ticketList[getPiaoType].id,
-                  token: "",
-                },
-              }).then((res) => {
-
-                let token = res.data.data.token;
-                axios({
-                  //抢
-                  method: "POST",
-                  url: `/api/ticket/order/createV2`,
-                  data: {
-                    project_id: piaoId.value,
-                    screen_id: arr.screen_list[tian.value ? tian.value - 1 : 0].id,
-                    sku_id: ticketList[getPiaoType].id,
-                    count: 1,
-                    pay_money: +qian.value,
-                    order_type: 1,
-                    timestamp: new Date().getTime(),
-                    token: token,
-                    deviceId: "3c2003ba05634736371935d33a47f77d",
-                    buyer_info: JSON.stringify(grxx),
-                  },
-                }).then((res) => {
-                  if (res.data.errno === 0 && res.data.errtag === 0) {
-                    clearInterval(data);
-                    alert("抢到了，请尽快去支付");
-                  }
-                });
-              });
-            }
-          });
-          if (isStop.value) {
-            clearInterval(data); // Stop the interval
+    axios({
+      method: "GET",
+      url: `/api/ticket/project/get?version=134&id=${piaoId.value}`,
+    }).then((res) => {
+      arr = res.data.data;
+      ticketList =
+          arr.screen_list[tian.value ? tian.value - 1 : 0].ticket_list; //数组下标代表第几天   //票类型
+      getPiaoType = 0;
+      if (piaoType.value) {
+        getPiaoType = +piaoType.value - 1;
+      } else {
+        for (let i = 0; i < ticketList.length; i++) {
+          if (ticketList[i].price === +qian.value) {
+            getPiaoType = i;
+            break;
           }
-        },
-        time.value ? time.value * 1000 : 1000
-    );
+        }
+      }
+      console.log('ticket info', ticketList);
+      const dateInfo = arr.screen_list[tian.value - 1].name;
+      const ticketDesc = ticketList[getPiaoType].desc;
+      ticketInfo.value = `日期: ${dateInfo}, 票: ${ticketDesc}`;
+      setTimeoutTask();
+    });
+  });
+
+  // 在指定时间后执行任务
+  function setTimeoutTask() {
+    setTimeout(() => {
+      // 获取一次Token，每次
+      getToken();
+    }, delay);
   }
 
+  function getToken() {
+    // 置灰跳过
+    if (ticketList[getPiaoType].clickable) {
+      console.log('is clickable');
+      axios({
+        //获取token
+        method: "POST",
+        url: `/api/ticket/order/prepare`,
+        data: {
+          project_id: piaoId.value,
+          screen_id: arr.screen_list[tian.value ? tian.value - 1 : 0].id,
+          order_type: 1,
+          count: 1,
+          sku_id: ticketList[getPiaoType].id,
+          token: "",
+        },
+      }).then((res) => {
+        logErrorMsg(res);
+        let token = res.data.data.token;
+        setRepeatTask(token);  // 开始定时循环任务
+      });
+    }
+  }
+
+  function setRepeatTask(token) {
+    let setRepeatTask = setInterval(() => {
+      axios({
+        //抢
+        method: "POST",
+        url: `/api/ticket/order/createV2`,
+        data: {
+          project_id: piaoId.value,
+          screen_id: arr.screen_list[tian.value ? tian.value - 1 : 0].id,
+          sku_id: ticketList[getPiaoType].id,
+          count: 1,
+          pay_money: +qian.value,
+          order_type: 1,
+          timestamp: new Date().getTime(),
+          token: token,
+          deviceId: "3c2003ba05634736371905d33a47f77d",
+          buyer_info: JSON.stringify(grxx),
+        },
+      }).then((res) => {
+        logErrorMsg(res);
+        if (res.data.errno === 0 && res.data.errtag === 0) {
+          clearInterval(setRepeatTask);
+          alert("抢到了，请尽快去支付");
+        }
+      });
+      if (isStop.value) {
+        clearInterval(setRepeatTask); // Stop the interval
+      }
+    }, time.value ? time.value * 1000 : 1000);
+  }
+
+  function logErrorMsg(res) {
+    if (res.data.errno !== 0) {
+      console.log(res.data.msg);
+    }
+  }
 };
 
 const toStop = () => {
