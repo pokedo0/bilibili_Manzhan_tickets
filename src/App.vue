@@ -1,24 +1,25 @@
 <template>
   <div>
     <div>只可以抢默认购票人</div>
-    <div>票信息ID（url上有）<input type="text" v-model="piaoId"/></div>
-    <div>第 <input type="text" v-model="tian"/> 天</div>
-    <div>钱数<input type="text" v-model="qian"/>（分）</div>
-    <div><input type="text" v-model="time"/>秒抢一次</div>
-    <div><input type="text" v-model="inputSetTime"/>设定开始抢票时间(19:59:59)</div>
+    <div>票信息ID（url上有）<input type="text" v-model="piaoId" /></div>
+    <div>第 <input type="text" v-model="tian" /> 天</div>
+    <div>钱数<input type="text" v-model="qian" />（分）</div>
+    <div><input type="text" v-model="time" />秒抢一次</div>
+    <div>
+      <input type="text" v-model="inputSetTime" />设定开始抢票时间(19:59:59)
+    </div>
     <div>
       抢第
       <input
-          type="text"
-          v-model="piaoType"
+        type="text"
+        v-model="piaoType"
       />种类型（没有填的话，按钱数判断，若有相同的钱数不能保证抢对票类型）
     </div>
     <div style="margin-top: 30px">当前时间：</div>
-    <div> {{ currentTime }}</div>
+    <div>{{ currentTime }}</div>
     <div style="margin-top: 30px">抢票信息：</div>
-    <div> {{ showSetTime }}</div>
-    <div> {{ ticketInfo }}</div>
-
+    <div>{{ showSetTime }}</div>
+    <div>{{ ticketInfo }}</div>
 
     <button @click="onclick">开始</button>
     <button @click="toStop">停止</button>
@@ -26,7 +27,7 @@
 </template>
 
 <script setup>
-import {onMounted, ref} from "vue";
+import { onMounted, ref } from "vue";
 import axios from "axios";
 import moment from "moment";
 
@@ -37,9 +38,9 @@ const piaoId = ref();
 const piaoType = ref();
 let isStop = ref();
 const inputSetTime = ref();
-const currentTime = ref('');
-let showSetTime = ref('');
-let ticketInfo = ref('');
+const currentTime = ref(""); //当前时间
+let showSetTime = ref("");
+let ticketInfo = ref("");
 
 // bw
 tian.value = 3;
@@ -55,7 +56,7 @@ piaoId.value = 73710;
 
 const updateTime = () => {
   setInterval(() => {
-    currentTime.value = moment().format('YYYY-MM-DD HH:mm:ss');
+    currentTime.value = moment().format("YYYY-MM-DD HH:mm:ss");
   }, 1000);
 };
 
@@ -63,25 +64,24 @@ onMounted(() => {
   updateTime();
 });
 
-
 function showTimeInfo() {
-  const fullTime = moment().format('YYYY-MM-DD') + ' ' + inputSetTime.value;
-  const parsedTime = moment(fullTime, 'YYYY-MM-DD HH:mm:ss', true);
+  const fullTime = moment().format("YYYY-MM-DD") + " " + inputSetTime.value;
+  const parsedTime = moment(fullTime, "YYYY-MM-DD HH:mm:ss", true);
   if (parsedTime.isValid()) {
     showSetTime.value = parsedTime;
   } else {
-    showSetTime = 'Invalid time';
+    showSetTime = "Invalid time";
   }
 }
 
 const onclick = () => {
-  showTimeInfo();
+  showTimeInfo(); //添加计划时间
   const currentTime = moment();
   let delay = 0;
   if (showSetTime.value?.isValid()) {
     delay = showSetTime.value.diff(currentTime); // 计算当前时间与指定时间的毫秒差
   }
-  console.log('delay:', delay);
+  console.log("delay:", delay);
   isStop.value = false;
   let getPiaoType = 0;
   let ticketList;
@@ -99,8 +99,7 @@ const onclick = () => {
       url: `/api/ticket/project/get?version=134&id=${piaoId.value}`,
     }).then((res) => {
       arr = res.data.data;
-      ticketList =
-          arr.screen_list[tian.value ? tian.value - 1 : 0].ticket_list; //数组下标代表第几天   //票类型
+      ticketList = arr.screen_list[tian.value ? tian.value - 1 : 0].ticket_list; //数组下标代表第几天   //票类型
       getPiaoType = 0;
       if (piaoType.value) {
         getPiaoType = +piaoType.value - 1;
@@ -112,7 +111,7 @@ const onclick = () => {
           }
         }
       }
-      console.log('ticket info', ticketList);
+      console.log("ticket info", ticketList);
       const dateInfo = arr.screen_list[tian.value - 1].name;
       const ticketDesc = ticketList[getPiaoType].desc;
       ticketInfo.value = `日期: ${dateInfo}, 票: ${ticketDesc}`;
@@ -129,9 +128,16 @@ const onclick = () => {
   }
 
   function getToken() {
+    axios({
+      method: "GET",
+      url: `/api/ticket/project/get?version=134&id=${piaoId.value}`,
+    }).then((res) => {
+      arr = res.data.data;
+      ticketList = arr.screen_list[tian.value ? tian.value - 1 : 0].ticket_list; //数组下标代表第几天   //票类型
+    });
     // 置灰跳过
     if (ticketList[getPiaoType].clickable) {
-      console.log('is clickable');
+      console.log("is clickable");
       axios({
         //获取token
         method: "POST",
@@ -147,40 +153,43 @@ const onclick = () => {
       }).then((res) => {
         logErrorMsg(res);
         let token = res.data.data.token;
-        setRepeatTask(token);  // 开始定时循环任务
+        setRepeatTask(token); // 开始定时循环任务
       });
     }
   }
 
   function setRepeatTask(token) {
-    let setRepeatTask = setInterval(() => {
-      axios({
-        //抢
-        method: "POST",
-        url: `/api/ticket/order/createV2`,
-        data: {
-          project_id: piaoId.value,
-          screen_id: arr.screen_list[tian.value ? tian.value - 1 : 0].id,
-          sku_id: ticketList[getPiaoType].id,
-          count: 1,
-          pay_money: +qian.value,
-          order_type: 1,
-          timestamp: new Date().getTime(),
-          token: token,
-          deviceId: "3c2003ba05634736371905d33a47f77d",
-          buyer_info: JSON.stringify(grxx),
-        },
-      }).then((res) => {
-        logErrorMsg(res);
-        if (res.data.errno === 0 && res.data.errtag === 0) {
-          clearInterval(setRepeatTask);
-          alert("抢到了，请尽快去支付");
+    let setRepeatTask = setInterval(
+      () => {
+        axios({
+          //抢
+          method: "POST",
+          url: `/api/ticket/order/createV2`,
+          data: {
+            project_id: piaoId.value,
+            screen_id: arr.screen_list[tian.value ? tian.value - 1 : 0].id,
+            sku_id: ticketList[getPiaoType].id,
+            count: 1,
+            pay_money: +qian.value,
+            order_type: 1,
+            timestamp: new Date().getTime(),
+            token: token,
+            deviceId: "3c2003ba05634736371905d33a47f77d",
+            buyer_info: JSON.stringify(grxx),
+          },
+        }).then((res) => {
+          logErrorMsg(res);
+          if (res.data.errno === 0 && res.data.errtag === 0) {
+            clearInterval(setRepeatTask);
+            alert("抢到了，请尽快去支付");
+          }
+        });
+        if (isStop.value) {
+          clearInterval(setRepeatTask); // Stop the interval
         }
-      });
-      if (isStop.value) {
-        clearInterval(setRepeatTask); // Stop the interval
-      }
-    }, time.value ? time.value * 1000 : 1000);
+      },
+      time.value ? time.value * 1000 : 1000
+    );
   }
 
   function logErrorMsg(res) {
@@ -192,7 +201,7 @@ const onclick = () => {
 
 const toStop = () => {
   isStop.value = true;
-}
+};
 </script>
 
 <style></style>
