@@ -67,6 +67,7 @@ onMounted(() => {
 function showTimeInfo() {
   const fullTime = moment().format("YYYY-MM-DD") + " " + inputSetTime.value;
   const parsedTime = moment(fullTime, "YYYY-MM-DD HH:mm:ss", true);
+  // todo 时间转换偶尔报错
   if (parsedTime.isValid()) {
     showSetTime.value = parsedTime;
   } else {
@@ -111,6 +112,7 @@ const onclick = () => {
           }
         }
       }
+      // 打印抢票信息
       console.log("ticket info", ticketList);
       const dateInfo = arr.screen_list[tian.value - 1].name;
       const ticketDesc = ticketList[getPiaoType].desc;
@@ -122,20 +124,12 @@ const onclick = () => {
   // 在指定时间后执行任务
   function setTimeoutTask() {
     setTimeout(() => {
-      // 获取一次Token，每次
       getToken();
     }, delay);
   }
 
-  function getToken() {
-    axios({
-      method: "GET",
-      url: `/api/ticket/project/get?version=134&id=${piaoId.value}`,
-    }).then((res) => {
-      arr = res.data.data;
-      ticketList = arr.screen_list[tian.value ? tian.value - 1 : 0].ticket_list; //数组下标代表第几天   //票类型
-    });
-    // 置灰跳过
+  async function getToken() {
+    await fetchClickableInfo();
     if (ticketList[getPiaoType].clickable) {
       console.log("is clickable");
       axios({
@@ -153,12 +147,36 @@ const onclick = () => {
       }).then((res) => {
         logErrorMsg(res);
         let token = res.data.data.token;
-        setRepeatTask(token); // 开始定时循环任务
+        createOrder(token); // 开始定时循环任务
       });
     }
   }
 
-  function setRepeatTask(token) {
+  // 循环判断是否可以开始抢售
+  function fetchClickableInfo() {
+    console.log("fetchClickableInfo");
+    if (ticketList[getPiaoType].clickable) {
+      return;
+    }
+    return new Promise((resolve) => {
+      const intervalId = setInterval(() => {
+        axios({
+          method: "GET",
+          url: `/api/ticket/project/get?version=134&id=${piaoId.value}`,
+        }).then((res) => {
+          arr = res.data.data;
+          ticketList = arr.screen_list[tian.value ? tian.value - 1 : 0].ticket_list; //数组下标代表第几天   //票类型
+        });
+        // 当满足条件时，停止定时任务，并解析 Promise
+        if (ticketList[getPiaoType].clickable || isStop.value) {
+          clearInterval(intervalId); // Stop the interval
+          resolve();
+        }
+      }, time.value ? time.value * 1000 : 1000); // 设置适当的间隔时间
+    });
+  }
+
+  function createOrder(token) {
     let setRepeatTask = setInterval(
       () => {
         axios({
