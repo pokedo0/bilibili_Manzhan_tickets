@@ -42,13 +42,19 @@ const currentTime = ref(""); //当前时间
 let showSetTime = ref("");
 let ticketInfo = ref("");
 
-// bw
-tian.value = 3;
-qian.value = 58800;
+// bml
+tian.value = 1;
+qian.value = 38000;
 time.value = 0.7;
-piaoId.value = 73710;
+piaoId.value = 73752;
 
-// 可购
+// bw
+// tian.value = 3;
+// qian.value = 58800;
+// time.value = 0.7;
+// piaoId.value = 73710;
+
+// 测试可购
 // tian.value = 1;
 // qian.value = 9000;
 // time.value = 0.7;
